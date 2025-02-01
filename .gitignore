@@ -1,0 +1,16 @@
+# Compiled files
+build/
+*.class
+
+# Package files, EXCEPT release versions
+*.jar
+!releases/**/*.jar
+
+# IDE specific files
+.idea/
+.vscode/
+*.iml
+
+# OS specific files
+.DS_Store
+Thumbs.db
