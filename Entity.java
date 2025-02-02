@@ -1,180 +1,148 @@
 public class Entity {
-    // Basic Identity
-    public int id;
-    public String name;
-    public String description;
-    public String type;        // PLAYER, ENEMY, or NPC
+    // Entity attributes
+    int id;
+    String name;
+    Location currentLocation;
+    boolean isAlive = true;
+    boolean isInanimate = false;
+    boolean isBlocked = false;
+    Location locationToUnblock = null;
+    Entity entityToUnblock = null;
+    Inventory inventory = new Inventory();
+    String description = "";
     
-    // Core Stats
-    public int hp;
-    public int maxHp;
-    public int baseDamage;
-    public int defense;
-    public int speed;
-    public boolean isAlive;
+    // Combat attributes
+    private int maxHealth = 100;
+    private int currentHealth = 100;
+    private int baseDamage = 10;
+    private int defense = 5;
+    private boolean isHostile = false;  // For NPCs that can fight back
     
-    // Progression
-    public int level;
-    public int experience;
-    public int experienceToNextLevel;
-    public int gold;
-    
-    // Equipment & Inventory
-    public Inventory inventory;
-    public Item equippedWeapon;
-    public Item equippedArmor;
-    
-    // World Interaction
-    public Location entityLocation;
-
-    /**
-     * Creates a new Entity with specified attributes.
-     * @param id Unique identifier for the entity
-     * @param name Entity name
-     * @param hp Current health points
-     * @param maxHp Maximum health points
-     * @param entityLocation Starting location
-     * @param baseDamage Base damage value
-     */
-    public Entity(int id, String name, int hp, int maxHp, Location entityLocation) {
-        if (entityLocation == null) {
-            throw new IllegalArgumentException("Entity location cannot be null");
-        }
+    // Constructor
+    public Entity(int id, String name, Location currentLocation) {
         this.id = id;
         this.name = name;
-        this.hp = hp;
-        this.maxHp = maxHp;
-        this.inventory = new Inventory(10);
-        this.entityLocation = entityLocation;
-        this.level = 1;
-        this.experience = 100;
-        this.defense = 1;
-        this.speed = 10;
-        this.gold = 0;
-        this.type = "NPC";
+        this.currentLocation = currentLocation;
         this.isAlive = true;
-        this.experienceToNextLevel = 100;
-        entityLocation.addEntity(this);
-    }
-
-    // Status Methods
-    public boolean isAlive() { 
-        return hp > 0; 
     }
     
-    public int getHp() { 
-        return hp; 
+    // Combat methods
+    public void takeDamage(int damage) {
+        int actualDamage = Math.max(1, damage - defense); // Minimum 1 damage
+        currentHealth -= actualDamage;
+        
+        if (currentHealth <= 0) {
+            currentHealth = 0;
+            isAlive = false;
+            // Unblock the location when the entity dies
+            if (locationToUnblock != null) {
+                locationToUnblock.isBlocked = false;
+            }
+            // Unblock the other entity when this one dies
+            if (entityToUnblock != null) {
+                entityToUnblock.isBlocked = false;
+            }
+        }
     }
     
-    public int getMaxHp() { 
-        return maxHp; 
+    public boolean attack(Entity target) {
+        if (!isAlive || !target.isAlive) {
+            return false;
+        }
+
+        // Calculate damage based on equipped weapon or base damage
+        int damageDealt = calculateDamage();
+        target.takeDamage(damageDealt);
+        
+        return true;
     }
     
-    public String getName() { 
-        return name; 
+    private int calculateDamage() {
+        // Check for weapon in inventory
+        for (Item item : inventory.items) {
+            if (item != null && item.name.toLowerCase().contains("sword")) {
+                return baseDamage + 5; // Sword adds 5 damage
+            }
+        }
+        return baseDamage;
     }
-
-    // Combat Methods
-    public void takeDamage(int amount) {
-        hp = Math.max(0, hp - amount);
+    
+    // Getters and setters
+    public int getCurrentHealth() {
+        return currentHealth;
     }
-
+    
+    public int getMaxHealth() {
+        return maxHealth;
+    }
+    
+    public void setMaxHealth(int maxHealth) {
+        this.maxHealth = maxHealth;
+        this.currentHealth = maxHealth;
+    }
+    
     public void heal(int amount) {
-        hp = Math.min(maxHp, hp + amount);
-    }
-
-    public int getAttackDamage() {
-        return baseDamage + (equippedWeapon != null ? equippedWeapon.damage : 0);
-    }
-
-    public void attack(Entity target) {
-        if (target != null && target.isAlive()) {
-            target.takeDamage(getAttackDamage());
-        }
-    }
-
-    // XP methods
-    public void gainExperience(int amount) {
-        if (amount <= 0) return;
-        
-        experience += amount;
-        while (experience >= experienceToNextLevel) {
-            levelUp();
-        }
-    }
-
-    public void levelUp() {
-        level++;
-        experience -= experienceToNextLevel;
-        experienceToNextLevel = calculateNextLevelExp();
-        
-        // Increase stats
-        maxHp += 10;
-        hp = maxHp;
-        baseDamage += 2;
+        currentHealth = Math.min(currentHealth + amount, maxHealth);
     }
     
-    private int calculateNextLevelExp() {
-        // Common RPG formula: each level needs 50% more XP than the last
-        return (int)(experienceToNextLevel * 1.5);
+    public void setBaseDamage(int damage) {
+        this.baseDamage = damage;
     }
-
-    // Movement/Location Methods
-    public boolean moveTo(Location newLocation) {
-        return entityLocation.moveEntity(this, newLocation);
+    
+    public void setDefense(int defense) {
+        this.defense = defense;
     }
-
-    public Location getLocation() {
-        return entityLocation;
+    
+    public void setHostile(boolean hostile) {
+        this.isHostile = hostile;
     }
-
-    // Equipment Methods
-    public boolean equipWeapon(Item item) {
-        if (inventory.removeItem(item, 1)) {  // Check if we have the item
-            if (equippedWeapon != null) {
-                inventory.addItem(equippedWeapon, 1);  // Put old weapon back in inventory
+    
+    public boolean isHostile() {
+        return isHostile;
+    }
+    
+    public String getHealthStatus() {
+        return name + ": " + currentHealth + "/" + maxHealth + " HP";
+    }
+    public void deathUnblocksLocation(Location location) {
+        this.locationToUnblock = location;
+    }
+    public void deathUnblocksEntity(Entity entity) {
+        this.entityToUnblock = entity;
+    }
+    // Existing Inventory inner class
+    public class Inventory {
+        public Item[] items = new Item[10];
+        
+        public Inventory() {
+        }
+        
+        // Inventory methods
+        public boolean inventoryHas(Item item) {
+            for (int i = 0; i < items.length; i++) {
+                if (items[i] == item) {
+                    return true;
+                }
             }
-            equippedWeapon = item;
-            return true;
+            return false;
         }
-        return false;
-    }
-
-    public boolean unequipWeapon() {
-        if (equippedWeapon != null && inventory.addItem(equippedWeapon, 1)) {
-            equippedWeapon = null;
-            return true;
-        }
-        return false;
-    }
-
-    // Inventory Methods
-    public boolean hasItem(Item item) {
-        for (int i = 0; i < inventory.items.length; i++) {
-            if (inventory.items[i] != null && inventory.items[i].id == item.id) {
-                return inventory.quantity[i] > 0;
+        
+        public void addItem(Item item) {
+            for (int i = 0; i < items.length; i++) {
+                if (items[i] == null) {
+                    items[i] = item;
+                    break;
+                }
             }
         }
-        return false;
-    }
-
-    public Item[] getInventoryContents() {
-        return inventory.items;
-    }
-
-    // Status/Info Methods
-    public String getStatus() {
-        StringBuilder status = new StringBuilder();
-        status.append(String.format("%s HP: %d/%d", name, hp, maxHp));
-        if (equippedWeapon != null) {
-            status.append(String.format(" | Weapon: %s", equippedWeapon.name));
+        
+        public void removeItem(Item item) {
+            for (int i = 0; i < items.length; i++) {
+                if (items[i] == item) {
+                    items[i] = null;
+                    break;
+                }
+            }
         }
-        return status.toString();
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Entity[%s, HP=%d/%d, Loc=%s]", 
-            name, hp, maxHp, entityLocation.getName());
     }
 }
