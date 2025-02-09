@@ -24,7 +24,7 @@ Win condition: Find and reach a safe place to rest.
 
 ## Demo Video
 
-
+[![Game Demo](http://img.youtube.com/vi/JwNAMWG3Uvo/0.jpg)](http://www.youtube.com/watch?v=JwNAMWG3Uvo)
 
 ## Files
 
