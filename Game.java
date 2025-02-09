@@ -1,8 +1,15 @@
+import java.util.ArrayList;
 import java.util.Arrays;
 
+// Main game system class - handles game loop, command processing, and world state
 public class Game {
-    static Entity[] gameEntities = new Entity[10];
+    
+    // Game state arrays for entities and world locations
+    //Entities is dynamic to allow for adding an removing entities.
+    static ArrayList<Entity> gameEntities = new ArrayList<>();
     static Location[] gameLocations = new Location[10];
+
+// Entry point - initializes game world and starts main menu
     public static void main(String[] args) {
 
         //Location setup code
@@ -40,6 +47,8 @@ public class Game {
         System.out.println("RPG Game");
         menuIntro();
     }
+
+    // Displays and handles main menu options
     public static void menuIntro() {
         System.out.println("1: New Game, 2: Exit");
         String startGame = System.console().readLine("");
@@ -57,59 +66,57 @@ public class Game {
                 menuIntro();
         }
     }
+
+    // Initializes new game state, creates player and entities
     public static void newGame() {
         System.out.println("Starting New Game");
-        //Character creation
         String playerName = System.console().readLine("Enter your character name: ");
 
-        //Character creation
-        Entity player = new Entity(0, playerName, gameLocations[0]);
+        // Character creation (players aren't inanimate)
+        Entity player = new Entity(0, playerName, gameLocations[0], "It's you.", false);
         player.inventory.addItem(new Item(0, "yellow gorse", "A small twig of gorse, despite the thorns, it's small yellow flowers are bright."));
         player.inventory.addItem(new Item(1, "rusted sword", "It fits comfortably in your hand."));
-        gameEntities[0] = player;
+        gameEntities.add(0, player);
         
-        //rabbit
-        Entity rabbit = new Entity(1, "rabbit", gameLocations[1]);
-        rabbit.description = "A small rabbit rummaging through the grass, not paying attention to you.";
-        rabbit.setMaxHealth(10);
-        rabbit.setBaseDamage(0);
+        // Rabbit (using Enemy class)
+        Enemy rabbit = new Enemy(1, "rabbit", gameLocations[1], 
+            "A small rabbit rummaging through the grass, not paying attention to you.", 
+            10, 0, 0);
         rabbit.inventory.addItem(new Item(2, "rabbit pelt", "Very soft."));
-        gameEntities[1] = rabbit;
+        gameEntities.add(1, rabbit);
 
-        //wolf
-        Entity wolf = new Entity(2, "wolf", gameLocations[2]);
-        wolf.description = "A large wolf, it looks hungry and territorial. It's standing in the way of the cave entrance.";
-        wolf.setMaxHealth(30);
-        wolf.setBaseDamage(10);
-        wolf.setHostile(true);
+        // Wolf (using Enemy class)
+        Enemy wolf = new Enemy(2, "wolf", gameLocations[2], 
+            "A large wolf, it looks hungry and territorial. It's standing in the way of the cave entrance.", 
+            30, 10, 5);
         wolf.deathUnblocksLocation(gameLocations[3]);
-        gameEntities[2] = wolf;
+        gameEntities.add(2, wolf);
 
-        //old barrel
-        Entity barrel = new Entity(4, "old barrel", gameLocations[3]);
-        barrel.description = "An old barrel, you can faintly see something shine inside.";
-        barrel.isInanimate = true;
+        // Barrel (inanimate object)
+        Entity barrel = new Entity(4, "old barrel", gameLocations[3], 
+            "An old barrel, you can faintly see something shine inside.", true);
         barrel.isBlocked = true;
         barrel.inventory.addItem(new Item(3, "A metal key", "It looks like it belongs to a door."));
-        gameEntities[4] = barrel;
+        gameEntities.add(3, barrel);
 
-        //skeleton
-        Entity skeleton = new Entity(3, "skeleton", gameLocations[3]);
-        skeleton.description = "The ancient bones of a skeleton, you can feel the dark magic that reanimates it. It stands in the way of a barrel. It's looking at you.";
-        skeleton.setMaxHealth(80);
-        skeleton.setBaseDamage(10);
-        skeleton.setHostile(true);
+        // Skeleton (using Enemy class)
+        Enemy skeleton = new Enemy(3, "skeleton", gameLocations[3], 
+            "The ancient bones of a skeleton, you can feel the dark magic that reanimates it. It stands in the way of a barrel. It's looking at you.",
+            80, 10, 5);
         skeleton.deathUnblocksEntity(barrel);
-        gameEntities[3] = skeleton;
+        gameEntities.add(4, skeleton);
 
-        //cabin bed
-        gameEntities[5] = new Entity(5, "bed", gameLocations[5]);
+        // Bed (inanimate object)
+        Entity bed = new Entity(5, "bed", gameLocations[5], "A cozy looking bed.", true);
+        gameEntities.add(5, bed);
 
         gameLoop();
     }
+
+    // Main game loop - processes player commands and updates game state
     public static void gameLoop() {
         boolean isRunning = true;
-        Entity player = gameEntities[0];  // Get the player entity
+        Entity player = gameEntities.get(0);  // Get the player entity
         System.out.println();
         System.out.println("You find yourself in a graveyard. It's well kept and looked after.");
         System.out.println("The yellow gorse growing nearby, make beuty of the otherwise grim place.");
@@ -145,7 +152,8 @@ public class Game {
                         System.out.println("Your inventory is empty.");
                     }
                     break;
-    
+                
+                // Combat handler - checks if target exists in same location, processes attacks & counterattacks
                 case "attack":
                     if (command.length < 2) {
                         System.out.println("What do you want to attack? Try 'attack [entity name]'");
@@ -196,6 +204,7 @@ public class Game {
                     }
                     break;
 
+                // Item interaction - handles key usage for cabin door and general item use
                 case "use":
                     if (command.length < 4) {
                         System.out.println("How do you want to use what? Try 'use [item name] on [target]'");
@@ -263,7 +272,8 @@ public class Game {
                         System.out.println("You don't see that here to use the item on.");
                     }
                     break;
-    
+                
+                // Item collection - allows taking items from defeated entities
                 case "take":
                 case "pick":
                     if ((command[0].equals("pick") && (command.length < 3 || !command[1].equals("up"))) ||
@@ -299,7 +309,8 @@ public class Game {
                         System.out.println("You don't see that here to take.");
                     }
                     break;
-    
+                    
+                // Movement system - handles location transitions and blocked path logic
                 case "go":
                 case "move":
                     if (command.length < 2) {
@@ -339,7 +350,8 @@ public class Game {
                         System.out.println("You can't go there from here.");
                     }
                     break;
-    
+                    
+                // Environment scanner - shows exits, entities, and items in current location
                 case "look":
                     System.out.println("\n" + player.currentLocation.description);
                     
@@ -386,7 +398,8 @@ public class Game {
                         System.out.println("There's nothing of interest here.");
                     }
                     break;
-    
+                
+                // Detailed inspector - shows descriptions of items and entities
                 case "examine":
                     if (command.length < 2) {
                         System.out.println("What do you want to examine? Try 'examine [item name]' or 'examine [entity name]'");
@@ -430,6 +443,9 @@ public class Game {
                         System.out.println("You don't see that here.");
                     }
                     break;
+                
+                
+                // Win condition checker - allows resting at cabin bed to win game
                 case "sleep":
                 case "rest":
                 case "relax":

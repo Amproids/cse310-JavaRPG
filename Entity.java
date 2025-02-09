@@ -1,73 +1,85 @@
 public class Entity {
-    // Entity attributes
-    int id;
-    String name;
-    Location currentLocation;
-    boolean isAlive = true;
-    boolean isInanimate = false;
-    boolean isBlocked = false;
-    Location locationToUnblock = null;
-    Entity entityToUnblock = null;
-    Inventory inventory = new Inventory();
-    String description = "";
+    // Basic entity properties
+    protected int id;
+    protected String name;
+    protected Location currentLocation;
+    protected boolean isAlive;
+    protected boolean isInanimate;
+    protected boolean isBlocked;
+    protected Location locationToUnblock;
+    protected Entity entityToUnblock;
+    protected Inventory inventory;
+    protected String description;
     
-    // Combat attributes
-    private int maxHealth = 100;
-    private int currentHealth = 100;
-    private int baseDamage = 10;
-    private int defense = 5;
-    private boolean isHostile = false;  // For NPCs that can fight back
+    // Combat stats
+    protected int maxHealth;
+    protected int currentHealth;
+    protected int baseDamage;
+    protected int defense;
+    protected boolean isHostile;
     
-    // Constructor
-    public Entity(int id, String name, Location currentLocation) {
+    // Creates a new entity with basic properties
+    public Entity(int id, String name, Location currentLocation, String description, boolean isInanimate) {
         this.id = id;
         this.name = name;
         this.currentLocation = currentLocation;
+        this.description = description;
+        this.isInanimate = isInanimate;
+        
+        // Initialize other properties
         this.isAlive = true;
+        this.isBlocked = false;
+        this.locationToUnblock = null;
+        this.entityToUnblock = null;
+        this.inventory = new Inventory();
+        
+        // Set default combat stats
+        this.maxHealth = 10;
+        this.currentHealth = 10;
+        this.baseDamage = 0;
+        this.defense = 0;
+        this.isHostile = false;
     }
     
-    // Combat methods
+    // Handles damage calculation and death effects
     public void takeDamage(int damage) {
-        int actualDamage = Math.max(1, damage - defense); // Minimum 1 damage
+        int actualDamage = Math.max(1, damage - defense);
         currentHealth -= actualDamage;
         
         if (currentHealth <= 0) {
             currentHealth = 0;
             isAlive = false;
-            // Unblock the location when the entity dies
             if (locationToUnblock != null) {
                 locationToUnblock.isBlocked = false;
             }
-            // Unblock the other entity when this one dies
             if (entityToUnblock != null) {
                 entityToUnblock.isBlocked = false;
             }
         }
     }
     
+    // Performs attack on target entity
     public boolean attack(Entity target) {
         if (!isAlive || !target.isAlive) {
             return false;
         }
 
-        // Calculate damage based on equipped weapon or base damage
         int damageDealt = calculateDamage();
         target.takeDamage(damageDealt);
-        
         return true;
     }
     
+    // Calculates damage based on equipped weapons
     private int calculateDamage() {
-        // Check for weapon in inventory
         for (Item item : inventory.items) {
             if (item != null && item.name.toLowerCase().contains("sword")) {
-                return baseDamage + 5; // Sword adds 5 damage
+                return baseDamage + 5;
             }
         }
         return baseDamage;
     }
     
-    // Getters and setters
+    // Health getters and setters
     public int getCurrentHealth() {
         return currentHealth;
     }
@@ -81,10 +93,12 @@ public class Entity {
         this.currentHealth = maxHealth;
     }
     
+    // Heals entity up to max health
     public void heal(int amount) {
         currentHealth = Math.min(currentHealth + amount, maxHealth);
     }
     
+    // Combat stat setters
     public void setBaseDamage(int damage) {
         this.baseDamage = damage;
     }
@@ -101,23 +115,29 @@ public class Entity {
         return isHostile;
     }
     
+    // Returns formatted health status string
     public String getHealthStatus() {
         return name + ": " + currentHealth + "/" + maxHealth + " HP";
     }
+
+    // Sets location to unblock on death
     public void deathUnblocksLocation(Location location) {
         this.locationToUnblock = location;
     }
+
+    // Sets entity to unblock on death
     public void deathUnblocksEntity(Entity entity) {
         this.entityToUnblock = entity;
     }
-    // Existing Inventory inner class
+
+    // Inventory management inner class
     public class Inventory {
         public Item[] items = new Item[10];
         
         public Inventory() {
         }
         
-        // Inventory methods
+        // Checks if item exists in inventory
         public boolean inventoryHas(Item item) {
             for (int i = 0; i < items.length; i++) {
                 if (items[i] == item) {
@@ -127,6 +147,7 @@ public class Entity {
             return false;
         }
         
+        // Adds item to first empty slot
         public void addItem(Item item) {
             for (int i = 0; i < items.length; i++) {
                 if (items[i] == null) {
@@ -136,6 +157,7 @@ public class Entity {
             }
         }
         
+        // Removes specified item from inventory
         public void removeItem(Item item) {
             for (int i = 0; i < items.length; i++) {
                 if (items[i] == item) {
